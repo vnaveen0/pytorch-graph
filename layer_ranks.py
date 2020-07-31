@@ -561,7 +561,7 @@ class SummaryGraph(object):
             recurrent (bool): indication on whether the model might have recurrent connections.
         """
         if self._layers_topological_order:
-            return self._layers_topological_order, self._rank_graph
+            return self._layers_topological_order, self._graph_order
         adj_map = self.adjacency_map()
         ranked_ops = OrderedDict([(k, _OpRank(v, 0)) for k, v in adj_map.items()])
 
@@ -597,11 +597,11 @@ class SummaryGraph(object):
         assert {k for k in ret if ranked_ops[k].rank == 0} <= set(roots)
         self._layers_topological_order = ret
 
-        rank_graph = pd.DataFrame(columns=['name','rank','succ'])
+        graph_order = pd.DataFrame(columns=['name','order','predecessor','successor'])
         ret2 = sorted([k for k in ranked_ops.keys()], key=lambda k: ranked_ops[k].rank )
 
-        my_rank = list(range(len(ret2)))
-        for idx, key in zip(my_rank,ret2):
+        new_order = list(range(len(ret2)))
+        for idx, key in zip(new_order,ret2):
             op_rank = idx
             pred_list = ranked_ops[key].adj_entry.predecessors
             pred_rank_list = [ret2.index(k.name) for k in pred_list]
@@ -611,14 +611,14 @@ class SummaryGraph(object):
             succ_rank_list = [ret2.index(k.name) for k in succ_list]
             succ_rank_list_str = ','.join([str(i) for i in succ_rank_list])
 
-            rank_graph = rank_graph.append( [{'name': key, 'rank': op_rank, 'pred': pred_rank_list_str,
-                                             'succ': succ_rank_list_str}],ignore_index=True
+            graph_order = graph_order.append( [{'name': key, 'order': op_rank, 'predecessor': pred_rank_list_str,
+                                             'successor': succ_rank_list_str}],ignore_index=True
             )
 
-        rank_graph.sort_values(by='rank', inplace=True)
-        rank_graph.reset_index(inplace=True,drop=True)
-        self._rank_graph = rank_graph
-        return ret, rank_graph
+        graph_order.sort_values(by='order', inplace=True)
+        graph_order.reset_index(inplace=True,drop=True)
+        self._graph_order = graph_order
+        return ret, graph_order
 
     def top_level_ops(self):
         if self._top_level_ops:
